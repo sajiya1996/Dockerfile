@@ -1,0 +1,46 @@
+Requirements
+This chart requires the following values to be defined:
+
+image.repository: The Docker image repository for the Shopfront microservice.
+image.tag: The Docker image tag for the Shopfront microservice.
+service.name: The name of the Kubernetes service for the Shopfront microservice.
+service.port: The port number of the Kubernetes service for the Shopfront microservice.
+ingress.host: The hostname for the Ingress rule that will expose the Shopfront microservice to the internet.
+Basic Deployment Template
+
+yaml
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-shopfront
+  labels:
+    app: {{ .Release.Name }}-shopfront
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-shopfront
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-shopfront
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-shopfront
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+
+Ingress Template
+
+yaml
+
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-shopfront-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod
