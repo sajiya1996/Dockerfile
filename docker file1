@@ -1,0 +1,28 @@
+Sure, here are Dockerfiles for the three Java applications:
+
+Product Catalogue Dockerfile
+bash
+
+FROM openjdk:8-jdk-alpine
+WORKDIR /app
+COPY target/app.jar /app
+EXPOSE 8020
+CMD ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar", "server"]
+
+Shopfront Dockerfile
+
+FROM openjdk:8-jdk-alpine
+WORKDIR /app
+COPY target/app.jar /app
+EXPOSE 8010
+CMD ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar", "server"]
+
+Stock Manager Dockerfile
+
+FROM openjdk:8-jdk-alpine
+WORKDIR /app
+COPY target/app.jar /app
+EXPOSE 8030
+CMD ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar", "server"]
+
+
