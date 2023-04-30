@@ -1,0 +1,67 @@
+To create CI/CD for GitHub Actions with the specified parameters, you can follow these steps:
+
+Create a service account in GCP and download its JSON key file.
+Encrypt the JSON key file using gpg and add it to the GitHub repository as a secret.
+Create a GitHub Actions workflow file in the .github/workflows directory of your repository.
+Configure the workflow to authenticate to GCP using the encrypted JSON key file.
+Build every microservice using Docker in the workflow.
+Tag the Docker images with the repository name and version.
+Push the Docker images to Google Container Registry in the workflow.
+Deploy every service to Kubernetes cluster on GCP using HELM in the workflow.
+Here is an example of a GitHub Actions workflow file that achieves these steps:
+
+bash
+
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      GCP_PROJECT_ID: my-project-id
+      DOCKER_REGISTRY: gcr.io/$GCP_PROJECT_ID
+      SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+      SERVICE_NAME: my-service
+      CHART_NAME: my-chart
+      CHART_VERSION: 0.1.0
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Authenticate to GCP
+      uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      with:
+        version: 'latest'
+        service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+        project_id: ${{ env.GCP_PROJECT_ID }}
+
+    - name: Build and push Docker images
+      env:
+        DOCKER_BUILDKIT: 1
+        DOCKER_BUILD_ARGS: --progress=plain --secret id=service-account-key,src=<(echo "$SERVICE_ACCOUNT_KEY" | base64 -d | gpg --quiet --batch --decrypt)
+      run: |
+        docker build $DOCKER_BUILD_ARGS -t $DOCKER_REGISTRY/$SERVICE_NAME:$GITHUB_SHA ./service
+        docker tag $DOCKER_REGISTRY/$SERVICE_NAME:$GITHUB_SHA $DOCKER_REGISTRY/$SERVICE_NAME:$CHART_VERSION
+        docker push $DOCKER_REGISTRY/$SERVICE_NAME:$GITHUB_SHA
+        docker push $DOCKER_REGISTRY/$SERVICE_NAME:$CHART_VERSION
+
+    - name: Deploy to Kubernetes
+      env:
+        KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      run: |
+        helm upgrade --install $CHART_NAME ./chart \
+          --namespace default \
+          --set image.repository=$DOCKER_REGISTRY/$SERVICE_NAME \
+          --set image.tag=$CHART_VERSION \
+          --set service.port=80 \
+          --set ingress.enabled=true \
+          --set ingress.hosts[0].host=my-service.example.com \
+          --set ingress.hosts[0].paths[0]=/ \
+          --set certManager.email=admin@example.com \
+          --set certManager.acmeServerUrl=https://acme-staging-v02.api.letsen
